@@ -1,0 +1,1317 @@
+<html><head><base href="/">
+  <title>Web3 AI Agent</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&amp;family=Rajdhani:wght@500;700&amp;display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.87.6/lib/index.iife.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://unpkg.com/@solana/wallet-adapter-phantom@0.9.24/lib/index.iife.js"></script>
+  <script src="https://cdn.coingecko.com/api/v3/simple/price?ids=solana&amp;vs_currencies=usd"></script>
+  <script src="https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"></script>
+  <style>
+    :root {
+      --neon-purple: #b026ff;
+      --dark-bg: #0a0b1e;
+      --grid-color: rgba(176, 38, 255, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--dark-bg);
+      color: #fff;
+      font-family: 'IBM Plex Mono', monospace;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 1rem;
+      background: rgba(176, 38, 255, 0.1);
+      border-bottom: 2px solid var(--neon-purple);
+      margin-bottom: 2rem;
+    }
+
+    .nav-link {
+      color: #fff;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      transition: all 0.3s ease;
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      background: var(--neon-purple);
+      color: #fff;
+    }
+
+    .page {
+      display: none;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .card {
+      background: rgba(176, 38, 255, 0.05);
+      border: 1px solid var(--neon-purple);
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .header h1 {
+      font-size: 3.5rem;
+      color: var(--neon-purple);
+      text-shadow: 0 0 10px rgba(176, 38, 255, 0.5);
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    button {
+      padding: 0.8rem 1.5rem;
+      background: var(--neon-purple);
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 15px rgba(176, 38, 255, 0.5);
+    }
+
+    #wallet-btn {
+      background: #ffffff;
+      color: var(--dark-bg);
+      font-weight: bold;
+    }
+
+    #wallet-btn:hover {
+      background: #f0f0f0;
+    }
+
+    #wallet-btn.connected {
+      background: var(--neon-purple);
+      color: white;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 0.8rem;
+      margin-bottom: 1rem;
+      background: rgba(176, 38, 255, 0.1);
+      border: 1px solid var(--neon-purple);
+      color: #fff;
+      border-radius: 4px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .loading {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    .token-balance {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(176, 38, 255, 0.2);
+    }
+
+    .suggestion-item {
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(176, 38, 255, 0.2);
+    }
+
+    .bullish { color: #00ff00; }
+    .bearish { color: #ff0000; }
+    .neutral { color: #ffff00; }
+
+    #predictionChart {
+      background: rgba(176, 38, 255, 0.05);
+      border-radius: 4px;
+    }
+
+    #riskScore {
+      margin-top: 1rem;
+      height: 10px;
+      background: linear-gradient(to right, #00ff00, #ffff00, #ff0000);
+      border-radius: 5px;
+      position: relative;
+    }
+
+    .background-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .grid {
+      position: absolute;
+      width: 200%;
+      height: 200%;
+      background-image: linear-gradient(var(--grid-color) 1px, transparent 1px),
+                        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: gridMove 20s linear infinite;
+      transform: perspective(500px) rotateX(45deg);
+    }
+
+    .particles {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, var(--neon-purple) 0%, transparent 5%);
+      background-size: 3px 3px;
+      animation: particlesFade 3s ease-in-out infinite;
+    }
+
+    .terminal-container {
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--neon-purple);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .terminal-header {
+      background: rgba(176, 38, 255, 0.2);
+      padding: 10px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .terminal-button {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--neon-purple);
+    }
+
+    .terminal-content {
+      padding: 15px;
+      font-family: 'IBM Plex Mono', monospace;
+      height: 300px;
+      overflow-y: auto;
+      color: #00ff00;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .terminal-line {
+      margin: 5px 0;
+      animation: fadeIn 0.3s ease;
+      white-space: pre-wrap;
+      word-break: break-all;
+      padding: 5px;
+    }
+
+    .terminal-line.success {
+      color: #00ff00;
+    }
+
+    .terminal-line.error {
+      color: #ff3366;
+    }
+
+    .terminal-line.system {
+      color: #b026ff;
+      font-style: italic;
+    }
+
+    .terminal-line.ai {
+      color: #ffff00;
+    }
+
+    .terminal-line.news {
+      color: #00ffff;
+    }
+
+    .terminal-line.input {
+      color: #ffffff;
+    }
+
+    #terminal-input {
+      background: none;
+      border: none;
+      color: #fff;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 14px;
+      flex: 1;
+      outline: none;
+    }
+
+    .prompt {
+      color: var(--neon-purple);
+      font-weight: bold;
+    }
+
+    .terminal-input-line {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .nft-preview {
+      margin-top: 1rem;
+      min-height: 300px;
+      border: 1px dashed var(--neon-purple);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nft-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .nft-item {
+      border: 1px solid var(--neon-purple);
+      border-radius: 8px;
+      padding: 0.5rem;
+      background: rgba(176, 38, 255, 0.1);
+    }
+
+    .nft-item img {
+      width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+
+    .nft-controls {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .nft-style-select {
+      flex: 1;
+      padding: 0.8rem;
+      background: rgba(176, 38, 255, 0.1);
+      border: 1px solid var(--neon-purple);
+      color: #fff;
+      border-radius: 4px;
+    }
+
+    .download-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--neon-purple);
+      color: white;
+      padding: 0.8rem 1.5rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .download-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .magic-eden-btn {
+      background: linear-gradient(45deg, #FF2D55, #FFBD2D);
+      color: white;
+      padding: 0.8rem 1.5rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+
+    .magic-eden-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 0 15px rgba(255, 45, 85, 0.3);
+    }
+
+    .magic-eden-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .crypto-gainers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .crypto-gainer-card {
+      background: rgba(176, 38, 255, 0.1);
+      border: 1px solid var(--neon-purple);
+      border-radius: 8px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .crypto-gainer-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 15px rgba(176, 38, 255, 0.3);
+    }
+
+    .gainer-price {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: var(--neon-purple);
+    }
+
+    .gainer-change.positive {
+      color: #00ff00;
+    }
+
+    .gainer-change.negative {
+      color: #ff0000;
+    }
+
+    .logo-container {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .site-logo {
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .eye {
+      animation: blink 4s infinite;
+    }
+
+    .social-links {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    .social-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.8rem 1.5rem;
+      border-radius: 4px;
+      color: white;
+      text-decoration: none;
+      transition: all 0.3s ease;
+    }
+
+    .social-btn.telegram {
+      background: #0088cc;
+    }
+
+    .social-btn.twitter {
+      background: #1DA1F2;
+    }
+
+    .social-btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.1);
+    }
+
+    .terminal-welcome {
+      color: var(--neon-purple);
+      margin-bottom: 1rem;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    @keyframes blink {
+      0%, 45%, 55%, 100% { transform: scaleY(1); }
+      50% { transform: scaleY(0.1); }
+    }
+
+    @keyframes gridMove {
+      0% { transform: perspective(500px) rotateX(45deg) translateY(0); }
+      100% { transform: perspective(500px) rotateX(45deg) translateY(-50px); }
+    }
+
+    @keyframes particlesFade {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.6; }
+    }
+
+    .connection-error {
+      border-color: #ff3366;
+      background: rgba(255, 51, 102, 0.1);
+    }
+
+    #development-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      color: #333;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      display: none;
+      z-index: 1000;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="#terminal" class="nav-link active" onclick="showPage(&apos;terminal&apos;)">Terminal</a>
+    <a href="#nft" class="nav-link" onclick="showPage(&apos;nft&apos;)">NFT Studio</a>
+    <a href="#about" class="nav-link" onclick="showPage(&apos;about&apos;)">About</a>
+    <button id="wallet-btn" onclick="connectWallet()">Connect Wallet</button>
+  </nav>
+  <div class="container">
+    <div class="background-animation">
+      <div class="grid"></div>
+      <div class="particles"></div>
+    </div>
+    <div id="terminal" class="page active">
+      <div class="header">
+        <div class="logo-container">
+          <svg class="site-logo" width="120" height="120" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="90" fill="var(--dark-bg)" stroke="var(--neon-purple)" stroke-width="4"/>
+            <circle cx="70" cy="80" r="20" fill="var(--neon-purple)" class="eye"/>
+            <circle cx="130" cy="80" r="20" fill="var(--neon-purple)" class="eye"/>
+            <path d="M60 120 Q100 160 140 120" stroke="var(--neon-purple)" stroke-width="6" fill="none"/>
+          </svg>
+          <h1>CryptoSage AI</h1>
+          <p>Your Web3 Companion &amp; Life Guide</p>
+          <div class="social-links">
+            <a href="https://t.me/cryptosage" target="_blank" class="social-btn telegram">
+              <svg viewBox="0 0 24 24" width="24" height="24">
+                <path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.95 8.03c-.19 2.01-.88 6.89-1.25 9.14-.15.91-.45 1.22-.74 1.25-.63.06-1.11-.42-1.72-.82-.95-.64-1.49-1.04-2.42-1.66-.94-.69-.33-1.07.2-1.69.14-.16 2.52-2.31 2.57-2.5.01-.03.01-.14-.05-.2-.06-.06-.17-.04-.24-.03-.1.03-1.77 1.13-5 3.28-.47.32-.9.48-1.29.47-.42-.01-1.23-.24-1.83-.44-.74-.24-1.33-.37-1.28-.79.03-.24.35-.48.95-.73 3.71-1.62 6.19-2.69 7.44-3.21 3.54-1.49 4.27-1.75 4.75-1.76.11 0 .35.03.5.15.13.1.17.23.19.33.02.13.01.3-.01.44z"/>
+              </svg>
+              Join Telegram
+            </a>
+            <a href="https://twitter.com/cryptosage" target="_blank" class="social-btn twitter">
+              <svg viewBox="0 0 24 24" width="24" height="24">
+                <path fill="currentColor" d="M23.643 4.937c-.835.37-1.732.62-2.675.733.962-.576 1.7-1.49 2.048-2.578-.9.534-1.897.922-2.958 1.13-.85-.904-2.06-1.47-3.4-1.47-2.572 0-4.658 2.086-4.658 4.66 0 .364.042.718.12 1.06-3.873-.195-7.304-2.05-9.602-4.868-.4.69-.63 1.49-.63 2.342 0 1.616.823 3.043 2.072 3.878-.764-.025-1.482-.234-2.11-.583v.06c0 2.257 1.605 4.14 3.737 4.568-.392.106-.803.162-1.227.162-.3 0-.593-.028-.877-.082.593 1.85 2.313 3.198 4.352 3.234-1.595 1.25-3.604 1.995-5.786 1.995-.376 0-.747-.022-1.112-.065 2.062 1.323 4.51 2.093 7.14 2.093 8.57 0 13.255-7.098 13.255-13.254 0-.2-.005-.402-.014-.602.91-.658 1.7-1.477 2.323-2.41z"/>
+            </svg>
+              Follow Us
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="terminal-container">
+        <div class="terminal-header">
+          <div class="terminal-button"></div>
+          <div class="terminal-button"></div>
+          <div class="terminal-button"></div>
+        </div>
+        <div id="aiTerminal" class="terminal-content">
+          <div class="terminal-welcome">
+            Welcome to CryptoSage AI! How can I assist you today?
+            Type &apos;help&apos; for available commands.
+          </div>
+          <div id="terminal-output"></div>
+          <div class="terminal-input-line">
+            <span class="prompt">&gt;</span>
+            <input type="text" id="terminal-input" autofocus>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="nft" class="page">
+      <div class="header">
+        <h1>NFT Studio</h1>
+      </div>
+      <div class="card">
+        <h2>Generate NFT</h2>
+        <textarea id="nftPrompt" placeholder="Describe your NFT..." rows="3"></textarea>
+        <select id="nftStyle" class="nft-style-select">
+          <option value="pixelart">Pixel Art</option>
+          <option value="abstract">Abstract</option>
+          <option value="cyberpunk">Cyberpunk</option>
+          <option value="minimalist">Minimalist</option>
+          <option value="3d">3D Render</option>
+          <option value="anime">Anime Style</option>
+          <option value="vaporwave">Vaporwave</option>
+          <option value="surreal">Surrealist</option>
+        </select>
+        <div class="nft-controls">
+          <button onclick="generateNFT()">Generate NFT</button>
+          <button id="downloadNFT" class="download-btn" onclick="downloadNFT()" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-5 4h10v-2H7v2z"/>
+            </svg>
+            Download
+          </button>
+          <button id="listMagicEden" class="magic-eden-btn" onclick="listOnMagicEden()" disabled>
+            List on Magic Eden
+          </button>
+        </div>
+        <div id="nftPreview" class="nft-preview"></div>
+      </div>
+      <div class="card">
+        <h2>Generated NFTs</h2>
+        <div id="nftGallery" class="nft-gallery"></div>
+      </div>
+    </div>
+    <div id="about" class="page">
+      <div class="header">
+        <h1>About</h1>
+      </div>
+      <div class="card">
+        <p>CryptoSage AI is a web3 AI agent designed to assist and guide users in the world of cryptocurrency and NFTs.</p>
+      </div>
+    </div>
+  </div>
+  <script>const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com', {
+  commitment: 'confirmed',
+  wsEndpoint: 'wss://api.mainnet-beta.solana.com/',
+  httpHeaders: {
+    'Content-Type': 'application/json'
+  }
+});
+let currentWallet = null;
+let solPrice = 0;
+let lastUpdate = Date.now();
+const CMC_API_KEY = 'YOUR-API-KEY';
+async function connectWallet() {
+  showDevelopmentNotification();
+  try {
+    const {
+      solana
+    } = window;
+    if (!solana?.isPhantom) {
+      alert('Please install Phantom wallet!');
+      window.open('https://phantom.app/', '_blank');
+      return;
+    }
+    const resp = await window.solana.connect({
+      onlyIfTrusted: false
+    }).catch(err => {
+      throw new Error(`Wallet connection failed: ${err.message}`);
+    });
+    currentWallet = resp.publicKey;
+    const walletBtn = document.getElementById('wallet-btn');
+    walletBtn.textContent = `${currentWallet.toString().slice(0, 4)}...${currentWallet.toString().slice(-4)}`;
+    walletBtn.classList.add('connected');
+    await Promise.all([updateWalletInfo().catch(console.error), initializeDashboard().catch(console.error)]);
+  } catch (err) {
+    console.error('Error connecting wallet:', err);
+    alert('Failed to connect wallet: ' + err.message);
+  }
+}
+async function updateWalletInfo() {
+  if (!currentWallet) return;
+  try {
+    const balance = await connection.getBalance(currentWallet);
+    document.getElementById('walletBalance').textContent = `Wallet Balance: ${(balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4)} SOL`;
+  } catch (error) {
+    console.error('Error updating wallet info:', error);
+    document.getElementById('walletBalance').textContent = 'Error fetching balance';
+  }
+}
+async function updateTerminal() {
+  const terminal = document.getElementById('cryptoTerminal');
+  const now = new Date().toLocaleTimeString();
+  try {
+    const headlines = await generateCryptoNews();
+    const terminalLines = headlines.map(headline => {
+      const colorClass = headline.impact === 'positive' ? 'bullish' : headline.impact === 'negative' ? 'bearish' : 'neutral';
+      return `[${now}] <a href="${headline.url}" target="_blank" class="${colorClass}">${headline.title}</a>
+              ↳ ${headline.details}`;
+    });
+    terminal.innerHTML = terminalLines.map(line => `<div class="terminal-line">${line}</div>`).join('') + terminal.innerHTML;
+    const lines = terminal.getElementsByClassName('terminal-line');
+    while (lines.length > 10) {
+      lines[lines.length - 1].remove();
+    }
+  } catch (error) {
+    terminal.innerHTML = `<div class="terminal-line error">[${now}] Error: ${error.message}</div>` + terminal.innerHTML;
+    console.error('Terminal update error:', error);
+  }
+  lastUpdate = Date.now();
+}
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  document.querySelector(`[href="#${pageId}"]`).classList.add('active');
+}
+async function initializeDashboard() {
+  try {
+    const response = await fetch('/api/ai_completion', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        prompt: `Provide a market analysis for Solana.
+                
+                <typescript-interface>
+                interface Response {
+                  analysis: string;
+                }
+                </typescript-interface>
+                
+                <example>
+                {
+                  "analysis": "Solana's network metrics show strong growth with increasing TVL and daily active users."
+                }
+                </example>`
+      })
+    });
+    const data = await response.json();
+    document.getElementById('marketAnalysis').textContent = data.analysis;
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+async function sendMessage() {
+  const userInput = document.getElementById('userInput');
+  const message = userInput.value.trim();
+  if (!message) return;
+  const chatHistory = document.getElementById('chatHistory');
+  chatHistory.innerHTML += `<p><strong>You:</strong> ${message}</p>`;
+  userInput.value = '';
+  try {
+    const response = await fetch('/api/ai_completion', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        prompt: `Respond to this Web3 related question: ${message}
+                
+                <typescript-interface>
+                interface Response {
+                  answer: string;
+                }
+                </typescript-interface>
+                
+                <example>
+                {
+                  "answer": "Smart contracts are self-executing contracts with the terms directly written into code."
+                }
+                </example>`
+      })
+    });
+    const data = await response.json();
+    chatHistory.innerHTML += `<p><strong>AI:</strong> ${data.answer}</p>`;
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+async function sendTransaction() {
+  if (!currentWallet) {
+    alert('Please connect your wallet first');
+    return;
+  }
+  const recipient = document.getElementById('recipientAddress').value;
+  const amount = parseFloat(document.getElementById('amount').value);
+  try {
+    const transaction = new solanaWeb3.Transaction().add(solanaWeb3.SystemProgram.transfer({
+      fromPubkey: currentWallet,
+      toPubkey: new solanaWeb3.PublicKey(recipient),
+      lamports: amount * solanaWeb3.LAMPORTS_PER_SOL
+    }));
+    const {
+      signature
+    } = await window.solana.signAndSendTransaction(transaction);
+    await connection.confirmTransaction(signature);
+    alert('Transaction successful!');
+    document.getElementById('txHistory').innerHTML += `
+              <p>Sent ${amount} SOL to ${recipient.slice(0, 4)}...${recipient.slice(-4)}</p>
+            `;
+  } catch (error) {
+    console.error('Transaction error:', error);
+    alert('Transaction failed');
+  }
+}
+async function updateTransactionInsights() {
+  try {
+    const response = await fetch('/api/ai_completion', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        prompt: `Analyze recent Solana transaction patterns.
+                
+                <typescript-interface>
+                interface Response {
+                  insight: string;
+                }
+                </typescript-interface>
+                
+                <example>
+                {
+                  "insight": "Recent transactions show increased DeFi activity and NFT trading volume."
+                }
+                </example>`
+      })
+    });
+    const data = await response.json();
+    document.getElementById('txInsights').textContent = data.insight;
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+async function updateDashboardUtilities() {
+  await Promise.all([updatePricePredictions(), updatePortfolioAnalysis(), updateTradeSuggestions(), updateTokenBalances()]);
+}
+async function updatePricePredictions() {
+  try {
+    const priceResp = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+    const priceData = await priceResp.json();
+    const currentPrice = priceData.solana.usd;
+    const historyResp = await fetch('https://api.coingecko.com/api/v3/coins/solana/market_chart?vs_currency=usd&days=30');
+    const historyData = await historyResp.json();
+    const prices = historyData.prices;
+    const sma20 = prices.slice(-20).reduce((a, b) => a + b[1], 0) / 20;
+    const lastPrice = prices[prices.length - 1][1];
+    const sentiment = lastPrice > sma20 ? 'bullish' : 'bearish';
+    const prediction = `Based on technical analysis, SOL is currently ${sentiment}. 20-day moving average is at $${sma20.toFixed(2)}`;
+    const priceTarget = sentiment === 'bullish' ? currentPrice * 1.1 : currentPrice * 0.9;
+    document.getElementById('pricePrediction').innerHTML = `
+      <p><strong>Current Price:</strong> $${currentPrice}</p>
+      <p><strong>Analysis:</strong> ${prediction}</p>
+      <p><strong>Sentiment:</strong> <span class="${sentiment}">${sentiment}</span></p>
+      <p><strong>Price Target:</strong> $${priceTarget.toFixed(2)}</p>
+    `;
+  } catch (error) {
+    console.error('Error updating price predictions:', error);
+    document.getElementById('pricePrediction').innerHTML = `<p>Error fetching price data</p>`;
+  }
+}
+async function updatePortfolioAnalysis() {
+  if (!currentWallet) return;
+  try {
+    const response = await fetch('/api/ai_completion', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        prompt: `Analyze this Solana wallet portfolio: ${currentWallet.toString()}
+                
+                <typescript-interface>
+                interface Response {
+                  analysis: string;
+                  riskScore: number;
+                  recommendation: string;
+                }
+                </typescript-interface>
+                
+                <example>
+                {
+                  "analysis": "Portfolio shows good diversification across DeFi protocols",
+                  "riskScore": 7.5,
+                  "recommendation": "Consider increasing stablecoin holdings"
+                }
+                </example>`
+      })
+    });
+    const data = await response.json();
+    document.getElementById('portfolioAnalysis').innerHTML = `
+              <p>${data.analysis}</p>
+              <p><strong>Risk Score:</strong> ${data.riskScore}/10</p>
+              <p><strong>Recommendation:</strong> ${data.recommendation}</p>
+            `;
+  } catch (error) {
+    console.error('Error updating portfolio analysis:', error);
+  }
+}
+async function updateTokenBalances() {
+  if (!currentWallet) return;
+  try {
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(currentWallet, {
+      programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+    });
+    const tokenBalancesHTML = tokenAccounts.value.map(account => `
+              <div class="token-balance">
+                <span>${account.account.data.parsed.info.mint.slice(0, 4)}...${account.account.data.parsed.info.mint.slice(-4)}</span>
+                <span>${account.account.data.parsed.info.tokenAmount.uiAmount}</span>
+              </div>
+            `).join('');
+    document.getElementById('tokenBalances').innerHTML = `
+              <h3>Token Balances</h3>
+              ${tokenBalancesHTML}
+            `;
+  } catch (error) {
+    console.error('Error updating token balances:', error);
+  }
+}
+async function updateTradeSuggestions() {
+  try {
+    const marketData = await fetch('https://api.coingecko.com/api/v3/coins/solana?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false').then(res => res.json());
+    const suggestions = [];
+    const priceChange24h = marketData.market_data.price_change_percentage_24h;
+    const athChange = marketData.market_data.ath_change_percentage.usd;
+    const volume = marketData.market_data.total_volume.usd;
+    if (priceChange24h < -5) {
+      suggestions.push({
+        action: "Consider accumulating SOL",
+        reason: `Price down ${priceChange24h.toFixed(2)}% in 24h - potential buying opportunity`,
+        confidence: 75
+      });
+    }
+    if (athChange < -30) {
+      suggestions.push({
+        action: "Long-term accumulation zone",
+        reason: `Currently ${athChange.toFixed(2)}% below all-time high`,
+        confidence: 85
+      });
+    }
+    if (volume > 1000000000) {
+      suggestions.push({
+        action: "Monitor for breakout",
+        reason: "High volume indicating strong market interest",
+        confidence: 70
+      });
+    }
+    document.getElementById('tradeSuggestions').innerHTML = suggestions.map(suggestion => `
+      <div class="suggestion-item">
+        <p><strong>${suggestion.action}</strong></p>
+        <p>${suggestion.reason}</p>
+        <p>Confidence: ${suggestion.confidence}%</p>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error('Error updating trade suggestions:', error);
+    document.getElementById('tradeSuggestions').innerHTML = '<p>Error fetching trade suggestions</p>';
+  }
+}
+const shownNewsIds = new Set();
+async function generateCryptoNews() {
+  try {
+    const newsResponse = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&api_key=YOUR_API_KEY');
+    const newsData = await newsResponse.json();
+    const newArticles = newsData.Data.filter(article => !shownNewsIds.has(article.id));
+    if (newArticles.length === 0) {
+      shownNewsIds.clear();
+      return generateCryptoNews();
+    }
+    const headlines = newArticles.slice(0, 3).map(article => {
+      shownNewsIds.add(article.id);
+      return {
+        title: article.title,
+        impact: article.sentiment === 'positive' ? 'positive' : article.sentiment === 'negative' ? 'negative' : 'neutral',
+        details: article.body.slice(0, 100) + '...',
+        url: article.url
+      };
+    });
+    return headlines;
+  } catch (error) {
+    console.error('Error fetching crypto news:', error);
+    return [];
+  }
+}
+async function generateNFT() {
+  const prompt = document.getElementById('nftPrompt').value.trim();
+  const style = document.getElementById('nftStyle').value;
+  if (!prompt) return;
+  const preview = document.getElementById('nftPreview');
+  const downloadBtn = document.getElementById('downloadNFT');
+  const magicEdenBtn = document.getElementById('listMagicEden');
+  preview.innerHTML = '<p>Generating NFT...</p>';
+  downloadBtn.disabled = true;
+  magicEdenBtn.disabled = true;
+  try {
+    const response = await fetch('/api/ai_completion', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        prompt: `Generate an NFT artwork in ${style} style based on this description: ${prompt}
+        
+        <typescript-interface>
+        interface Response {
+          svg: string;
+          attributes: Array<{
+            trait_type: string;
+            value: string;
+          }>;
+        }
+        </typescript-interface>
+
+        <example>
+        {
+          "svg": "<svg width='400' height='400'>...</svg>",
+          "attributes": [
+            {
+              "trait_type": "Style",
+              "value": "Pixel Art"
+            },
+            {
+              "trait_type": "Theme",
+              "value": "Cyberpunk"
+            }
+          ]
+        }
+        </example>`,
+        data: {
+          prompt,
+          style
+        }
+      })
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    if (!data || !data.svg) {
+      throw new Error('Invalid response format');
+    }
+    preview.innerHTML = data.svg;
+    downloadBtn.disabled = false;
+    magicEdenBtn.disabled = false;
+    const gallery = document.getElementById('nftGallery');
+    const nftItem = document.createElement('div');
+    nftItem.className = 'nft-item';
+    nftItem.innerHTML = `
+      ${data.svg}
+      <p><strong>Style:</strong> ${style}</p>
+      <p><strong>Traits:</strong></p>
+      ${data.attributes?.map(attr => `<p>${attr.trait_type}: ${attr.value}</p>`).join('') || ''}
+    `;
+    gallery.prepend(nftItem);
+  } catch (error) {
+    console.error('Error generating NFT:', error);
+    preview.innerHTML = `<p>Error generating NFT: ${error.message}</p>`;
+    downloadBtn.disabled = true;
+    magicEdenBtn.disabled = true;
+  }
+}
+async function fetchCryptoGainers() {
+  try {
+    const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=price_change_percentage_24h_desc&per_page=12&page=1&sparkline=false');
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching crypto gainers:', error);
+    return [];
+  }
+}
+async function updateCryptoGainers() {
+  const gainersContainer = document.getElementById('cryptoGainers');
+  try {
+    const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=price_change_percentage_24h_desc&per_page=12&page=1&sparkline=false', {
+      cache: 'no-store'
+    });
+    const gainers = await response.json();
+    gainersContainer.innerHTML = gainers.map(coin => `
+      <div class="crypto-gainer-card" onclick="window.open('https://coinmarketcap.com/currencies/${coin.id}', '_blank')">
+        <img src="${coin.image}" width="30" height="30" alt="${coin.name}">
+        <h3>${coin.symbol.toUpperCase()}</h3>
+        <div class="gainer-price">$${coin.current_price.toFixed(2)}</div>
+        <div class="gainer-change ${coin.price_change_percentage_24h >= 0 ? 'positive' : 'negative'}">
+          ${coin.price_change_percentage_24h.toFixed(2)}%
+        </div>
+      </div>
+    `).join('');
+  } catch (error) {
+    gainersContainer.innerHTML = '<p>Error loading crypto gainers</p>';
+    console.error('Error updating crypto gainers:', error);
+  }
+}
+function downloadNFT() {
+  const svg = document.getElementById('nftPreview').innerHTML;
+  const blob = new Blob([svg], {
+    type: 'image/svg+xml'
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'nft.svg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+async function listOnMagicEden() {
+  showDevelopmentNotification();
+}
+function showDevelopmentNotification() {
+  let notification = document.getElementById('development-notification');
+  if (!notification) {
+    notification = document.createElement('div');
+    notification.id = 'development-notification';
+    document.body.appendChild(notification);
+  }
+  notification.innerHTML = `
+    <h3 style="margin-bottom: 0.5rem"> Coming Soon!</h3>
+    <p>Magic Eden integration is under development and will be ready in 2 days.</p>
+  `;
+  notification.style.display = 'block';
+  setTimeout(() => {
+    notification.style.display = 'none';
+  }, 3000);
+}
+window.onload = async () => {
+  await Promise.all([updateTerminal(), updateCryptoGainers()]).catch(console.error);
+};
+setInterval(async () => {
+  if (document.getElementById('terminal').classList.contains('active')) {
+    await Promise.all([updateCryptoGainers(), updateTradeSuggestions()]).catch(console.error);
+  }
+}, 60000);
+setInterval(async () => {
+  if (document.getElementById('terminal').classList.contains('active')) {
+    await updateCryptoGainers().catch(console.error);
+  }
+}, 30000);
+let terminalHistory = [];
+let historyIndex = -1;
+const terminalInput = document.getElementById('terminal-input');
+const terminalOutput = document.getElementById('terminal-output');
+terminalInput.addEventListener('keydown', async e => {
+  if (e.key === 'Enter') {
+    const input = terminalInput.value.trim();
+    if (!input) return;
+    appendToTerminal(`> ${input}`, 'input');
+    terminalHistory.push(input);
+    historyIndex = terminalHistory.length;
+    terminalInput.value = '';
+    await processCommand(input);
+    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (historyIndex > 0) {
+      historyIndex--;
+      terminalInput.value = terminalHistory[historyIndex];
+    }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (historyIndex < terminalHistory.length - 1) {
+      historyIndex++;
+      terminalInput.value = terminalHistory[historyIndex];
+    } else {
+      historyIndex = terminalHistory.length;
+      terminalInput.value = '';
+    }
+  }
+});
+async function processCommand(input) {
+  const command = input.toLowerCase();
+  if (command === 'help') {
+    appendToTerminal(`
+      Available commands:
+      - help: Show this help message
+      - price <symbol/CA>: Get crypto price (e.g., price sol, price <contract-address>)
+      - analyze <symbol>: Get detailed crypto analysis
+      - market: Show top gainers and market overview
+      - news: Show latest crypto news
+      - nft: Switch to NFT generator
+      - wallet: Show wallet details
+      - clear: Clear terminal
+      - about: About CryptoSage AI
+    `, 'system');
+  } else if (command.startsWith('price ')) {
+    const query = command.split(' ')[1];
+    appendToTerminal(`Fetching price for ${query}...`, 'system');
+    try {
+      if (query.length > 30) {
+        const price = await getTokenPriceByCA(query);
+        if (price) {
+          appendToTerminal(`
+            Token Price Information:
+            Price: $${price.toFixed(8)}
+            24h Volume: ${price.volume24h || 'N/A'}
+            Market Cap: $${price.marketCap || 'N/A'}
+          `, 'success');
+        } else {
+          appendToTerminal('Unable to fetch price for this contract address', 'error');
+        }
+      } else {
+        const response = await fetch(`https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=${query.toUpperCase()}`, {
+          headers: {
+            'X-CMC_PRO_API_KEY': CMC_API_KEY
+          }
+        });
+        const data = await response.json();
+        if (data.data && data.data[query.toUpperCase()]) {
+          const coin = data.data[query.toUpperCase()];
+          appendToTerminal(`
+            ${coin.name} (${coin.symbol})
+            Price: $${coin.quote.USD.price.toFixed(4)}
+            24h Change: ${coin.quote.USD.percent_change_24h.toFixed(2)}%
+            Market Cap: $${coin.quote.USD.market_cap.toLocaleString()}
+            24h Volume: $${coin.quote.USD.volume_24h.toLocaleString()}
+          `, coin.quote.USD.percent_change_24h >= 0 ? 'success' : 'error');
+        } else {
+          appendToTerminal('Cryptocurrency not found', 'error');
+        }
+      }
+    } catch (error) {
+      console.error('Price fetch error:', error);
+      appendToTerminal('Error fetching price data. Please ensure the symbol/address is correct.', 'error');
+    }
+  } else if (command.startsWith('analyze ')) {
+    const symbol = command.split(' ')[1];
+    appendToTerminal(`Analyzing ${symbol.toUpperCase()}...`, 'system');
+    try {
+      const response = await fetch('/api/ai_completion', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: `Analyze current market conditions for ${symbol}`,
+          format: 'analysis'
+        })
+      });
+      const data = await response.json();
+      appendToTerminal(data.response, 'ai');
+    } catch (error) {
+      appendToTerminal('Error performing analysis', 'error');
+    }
+  } else if (command === 'market') {
+    appendToTerminal('Fetching market data...', 'system');
+    try {
+      const gainers = await fetchCryptoGainers();
+      let output = 'Top Gainers (24h):\n';
+      gainers.slice(0, 5).forEach(coin => {
+        output += `${coin.symbol.toUpperCase()}: $${coin.current_price.toFixed(2)} (${coin.price_change_percentage_24h.toFixed(2)}%)\n`;
+      });
+      appendToTerminal(output, 'success');
+    } catch (error) {
+      appendToTerminal('Error fetching market data', 'error');
+    }
+  } else if (command === 'news') {
+    appendToTerminal('Fetching latest news...', 'system');
+    try {
+      const headlines = await generateCryptoNews();
+      headlines.forEach(headline => {
+        appendToTerminal(`${headline.title}\n→ ${headline.url}`, 'news');
+      });
+    } catch (error) {
+      appendToTerminal('Error fetching news', 'error');
+    }
+  } else if (command === 'nft') {
+    showPage('nft');
+  } else if (command === 'clear') {
+    terminalOutput.innerHTML = '';
+  } else if (command === 'about') {
+    appendToTerminal(`
+      CryptoSage AI - Your Web3 Companion & Life Guide
+      Version: 1.0.0
+      
+      A powerful AI assistant designed to help you navigate the crypto world,
+      generate NFTs, and provide life guidance.
+      
+      Join our community:
+      Telegram: https://t.me/cryptosage
+      Twitter: https://twitter.com/cryptosage
+    `, 'system');
+  } else {
+    try {
+      const response = await fetch('/api/ai_completion', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: input
+        })
+      });
+      const data = await response.json();
+      appendToTerminal(data.response, 'ai');
+    } catch (error) {
+      appendToTerminal('Error processing command', 'error');
+    }
+  }
+}
+async function getTokenPriceByCA(contractAddress) {
+  try {
+    if (contractAddress.length === 44 || contractAddress.length === 43) {
+      const response = await fetch(`https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?address=${contractAddress}&chain=solana`, {
+        headers: {
+          'X-CMC_PRO_API_KEY': CMC_API_KEY
+        }
+      });
+      const data = await response.json();
+      if (data.data && data.data[0]) {
+        const token = data.data[0];
+        return {
+          price: token.quote.USD.price,
+          volume24h: token.quote.USD.volume_24h,
+          marketCap: token.quote.USD.market_cap
+        };
+      }
+    }
+    const response = await fetch(`https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?address=${contractAddress}`, {
+      headers: {
+        'X-CMC_PRO_API_KEY': CMC_API_KEY
+      }
+    });
+    const data = await response.json();
+    if (data.data && data.data[0]) {
+      return data.data[0].quote.USD.price;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching token price:', error);
+    return null;
+  }
+}
+function appendToTerminal(text, type = 'default') {
+  const line = document.createElement('div');
+  line.className = `terminal-line ${type}`;
+  if (type === 'system' || type === 'error' || type === 'success') {
+    line.textContent = text;
+  } else {
+    line.style.whiteSpace = 'pre-wrap';
+    line.textContent = text;
+  }
+  terminalOutput.appendChild(line);
+  terminalOutput.scrollTop = terminalOutput.scrollHeight;
+}</script>
+</body>
+</html>
